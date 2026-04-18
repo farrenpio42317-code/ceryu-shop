@@ -1,67 +1,50 @@
 
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>VIP 资源发卡站</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ceryu Shop - 极速发卡</title>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.4.4/build/qrcode.min.js"></script>
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f4f4f9; }
-        .card { background: white; padding: 40px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); text-align: center; max-width: 400px; }
-        h1 { color: #333; }
-        button { background: #24292e; color: white; border: none; padding: 15px 30px; border-radius: 10px; cursor: pointer; font-size: 18px; transition: 0.3s; }
-        button:hover { background: #444; }
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f4f4f9; }
+        .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; width: 300px; }
+        h1 { color: #333; margin-bottom: 0.5rem; }
+        .price { font-size: 1.2rem; color: #666; margin-bottom: 1.5rem; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 1rem; transition: 0.3s; }
+        button:hover { background: #0056b3; }
+        #qrcode { margin-top: 15px; display: flex; justify-content: center; }
     </style>
 </head>
 <body>
     <div class="card">
         <h1>VIP 账号测试</h1>
-        <p>价格: 1.0 USDT (TRC20)</p>
-        <button onclick="pay()">点击获取付款地址</button>
+        <p class="price">价格: 1.0 USDT (TRC20)</p>
+        <button onclick="startPay()">点击支付获取卡密</button>
     </div>
-
     <script>
-        async function pay() {
-            const API_HOST = "https://ceryu.eu.cc"; 
+        async function startPay() {
+            Swal.fire({ title: '正在创建订单...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
             try {
-                const res = await fetch(`${API_HOST}/api/pay`);
-                const data = await res.json();
-                
-                Swal.fire({
-                    title: '等待转账',
-                    html: `
-                        <div style="text-align: left; background: #eee; padding: 10px; border-radius: 8px; font-family: monospace; word-break: break-all;">
-                            <p style="color:red; font-weight:bold; margin-top:0;">请支付：1.0 USDT (TRC20)</p>
-                            <p>收款地址：<br><b>${data.address}</b></p>
-                        </div>
-                        <p style="font-size: 14px; color: #666; margin-top: 15px;">转账完成后请勿关闭窗口，系统自动监测入账...</p>
-                    `,
-                    icon: 'info',
-                    showConfirmButton: false,
-                    allowOutsideClick: false,
-                    didOpen: () => {
-                        const timer = setInterval(async () => {
-                            try {
-                                const c = await fetch(`${API_HOST}/api/check?id=${data.orderId}`);
-                                const s = await c.json();
-                                if (s.status === 'paid') {
-                                    clearInterval(timer);
-                                    Swal.fire({
-                                        title: '支付成功！',
-                                        html: `<p>您的卡密是：</p><div style="background:#d4edda; padding:15px; border-radius:8px; font-weight:bold; color:#155724;">${s.card}</div>`,
-                                        icon: 'success',
-                                        confirmButtonText: '保存卡密'
-                                    });
-                                }
-                            } catch(e) {}
-                        }, 5000);
-                    }
-                });
-            } catch (e) {
-                Swal.fire('错误', '无法连接查账服务器，请检查CF配置', 'error');
+                const response = await fetch('https://ceryu-faka-api.farrenpio42317.workers.dev/api/pay');
+                const data = await response.json();
+                if (data.address) {
+                    Swal.fire({
+                        title: '扫码支付 (TRC20)',
+                        html: `
+                            <div id="qrcode"></div>
+                            <p style="margin-top:10px;"><b>应付金额:</b> ${data.amount} USDT</p>
+                            <p style="font-size:12px; color:#666; word-break:break-all;"><b>支付地址:</b><br>${data.address}</p>
+                        `,
+                        confirmButtonText: '我已支付',
+                        didOpen: () => { QRCode.toCanvas(document.getElementById('qrcode'), data.address, { width: 180 }); }
+                    });
+                }
+            } catch (error) {
+                Swal.fire('错误', '无法连接账单服务器', 'error');
             }
         }
     </script>
 </body>
 </html>
-    
