@@ -1,0 +1,67 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>VIP 资源发卡站</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f4f4f9; }
+        .card { background: white; padding: 40px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); text-align: center; max-width: 400px; }
+        h1 { color: #333; }
+        button { background: #24292e; color: white; border: none; padding: 15px 30px; border-radius: 10px; cursor: pointer; font-size: 18px; transition: 0.3s; }
+        button:hover { background: #444; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>VIP 账号测试</h1>
+        <p>价格: 1.0 USDT (TRC20)</p>
+        <button onclick="pay()">点击获取付款地址</button>
+    </div>
+
+    <script>
+        async function pay() {
+            const API_HOST = "https://ceryu.eu.cc"; 
+            try {
+                const res = await fetch(`${API_HOST}/api/pay`);
+                const data = await res.json();
+                
+                Swal.fire({
+                    title: '等待转账',
+                    html: `
+                        <div style="text-align: left; background: #eee; padding: 10px; border-radius: 8px; font-family: monospace; word-break: break-all;">
+                            <p style="color:red; font-weight:bold; margin-top:0;">请支付：1.0 USDT (TRC20)</p>
+                            <p>收款地址：<br><b>${data.address}</b></p>
+                        </div>
+                        <p style="font-size: 14px; color: #666; margin-top: 15px;">转账完成后请勿关闭窗口，系统自动监测入账...</p>
+                    `,
+                    icon: 'info',
+                    showConfirmButton: false,
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        const timer = setInterval(async () => {
+                            try {
+                                const c = await fetch(`${API_HOST}/api/check?id=${data.orderId}`);
+                                const s = await c.json();
+                                if (s.status === 'paid') {
+                                    clearInterval(timer);
+                                    Swal.fire({
+                                        title: '支付成功！',
+                                        html: `<p>您的卡密是：</p><div style="background:#d4edda; padding:15px; border-radius:8px; font-weight:bold; color:#155724;">${s.card}</div>`,
+                                        icon: 'success',
+                                        confirmButtonText: '保存卡密'
+                                    });
+                                }
+                            } catch(e) {}
+                        }, 5000);
+                    }
+                });
+            } catch (e) {
+                Swal.fire('错误', '无法连接查账服务器，请检查CF配置', 'error');
+            }
+        }
+    </script>
+</body>
+</html>
+    
